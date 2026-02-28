@@ -1,0 +1,43 @@
+services:
+  pasai-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command: 
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+      - ./.env:/root/.env
+    ports:
+      - "4040:4040"
+    env_file:
+      - .env
+    depends_on:
+      - pasai-app
+
+  github-runner:
+    image: myoung34/github-runner:latest
+    restart: always
+    environment:
+      RUNNER_NAME: pasai-runner
+      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      RUNNER_REPOSITORY_COVER: boydyngo/pas-ai
+      RUNNER_WORKDIR: /github/workspace
+      RUNNER_GROUP: Default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner-data:/github
+    env_file:
+      - .env
+
+volumes:
+  runner-data:

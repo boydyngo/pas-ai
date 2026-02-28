@@ -1,0 +1,7 @@
+version: '2'
+authtoken: 3AHSMdaRMecu1WjkuHhFVF0k1V7_4JyQG4vPcihQ3KCPc5sa7
+tunnels:
+  pasai-web:
+    proto: http
+    addr: pasai-app:3000
+    domain: pasai-web.ngrok.app
