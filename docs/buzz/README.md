@@ -22,13 +22,15 @@ in a single unified event log.
 
 | Document | Read it for |
 |---|---|
-| [LOCAL-SETUP.md](./LOCAL-SETUP.md) | **Running this on your own machine — read first if you are not in the cloud session** |
+| [HANDOFF.md](./HANDOFF.md) | **Full engineering handoff — start here if you are picking this work up** |
+| [LOCAL-SETUP.md](./LOCAL-SETUP.md) | **Running this on your own machine** |
 | [PROVIDERS.md](./PROVIDERS.md) | Connecting OpenAI, Anthropic, and Google accounts — **start here** |
 | [MOBILE.md](./MOBILE.md) | Getting Buzz onto a phone |
 | [CONSTRAINTS.md](./CONSTRAINTS.md) | Which hosts this environment blocks, and the substitutions made |
 | [`scripts/install-buzz.sh`](../../scripts/install-buzz.sh) | Reproducible source install |
 | [`scripts/run-buzz.sh`](../../scripts/run-buzz.sh) | start / stop / status / logs / migrate / key |
 | [`scripts/run-agent.sh`](../../scripts/run-agent.sh) | Attach an agent, with cost guards pre-applied |
+| [`scripts/render-audio.py`](../../scripts/render-audio.py) | Render the briefing to speech (local Kokoro, or Google Cloud TTS) |
 
 ## Three findings that change how you should plan
 
