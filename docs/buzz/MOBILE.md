@@ -36,12 +36,49 @@ Android SDK is the hard stop. See [CONSTRAINTS.md](./CONSTRAINTS.md).
 
 ---
 
-## Recommended today: the web client over a tunnel
+## Correction: the web client is NOT a chat client
 
-This is the option that actually works on your phone right now. The relay can serve the
-built web bundle directly.
+An earlier draft of this document recommended the web client over a tunnel as the way to
+use Buzz on a phone. **That was wrong**, and it was wrong because I recommended it before
+looking at it. Having now built and run it:
 
-The web client is already built at `/home/user/buzz-src/web/dist`.
+The web bundle the relay serves has exactly two features:
+
+```
+web/src/features/
+├── repos/     — repo list, repo detail, blob viewer, commits
+└── invite/    — accepting an invite
+```
+
+There is **no channel list, no message view, no DM, no canvas**. Loading it shows a git
+community browser and a button that hands off to the desktop app:
+
+> **This community is empty.** Repositories pushed to this community will show up here.
+> Open this community in the Buzz desktop app to start pushing code.
+> `[ Open in Buzz ]`
+
+The env var that enables it is named accurately — `BUZZ_SERVE_GIT_WEB_GUI`. It is a *git
+web GUI*, not the Buzz client.
+
+## So what can you actually do on a phone today?
+
+Honestly: **there is no good way to use Buzz's chat on a phone right now.** Ranked by how
+usable they are:
+
+| Option | Verdict |
+|---|---|
+| **Build the Flutter app from source** | The only real path to chat on a phone. Pre-1.0 (`version: 0.0.0+1`), no push notifications. Instructions below. |
+| **`buzz` CLI over SSH** | Genuinely workable if you live in a terminal. `buzz messages get/send`, `buzz channels list` all work from a phone SSH client. Agent-first, not pretty. |
+| **Web client over a tunnel** | Only if you want to *browse repos* from your phone. Not chat. |
+| **Desktop app** | Works well — but that means a laptop, not a phone. |
+
+If chat on your phone is the actual requirement, the honest answer is to wait until Block
+moves mobile out of the "🚧 being wired up" column. Push notifications are further out
+still, and a chat app without them has limited value on a phone anyway.
+
+## Serving the web client anyway (repo browsing)
+
+The web client is built at `web/dist`.
 
 ### 1. Point the relay at the bundle
 
@@ -71,7 +108,8 @@ ngrok http 3000
 
 1. Open the tunnel's HTTPS URL in Safari or Chrome.
 2. **Add to Home Screen** — it behaves much like an installed app.
-3. Sign in with your Nostr key.
+
+Remember what you get: a repository browser. Not chat.
 
 ### Security — read before tunnelling
 

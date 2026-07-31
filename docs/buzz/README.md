@@ -46,10 +46,13 @@ Further, **there is no native Google/Gemini provider at all** — Gemini is reac
 via OpenRouter or Block's internal Databricks route. See
 [PROVIDERS.md](./PROVIDERS.md).
 
-**3. The mobile app is not shipped.** Block lists mobile clients in the "🚧 being wired
-up" column. No App Store build, no Play Store build, no APK. Push notifications are
-further out still. The working option for a phone today is the web client over a tunnel.
-See [MOBILE.md](./MOBILE.md).
+**3. The mobile app is not shipped, and the web client is not a substitute.** Block lists
+mobile clients in the "🚧 being wired up" column — no App Store build, no Play Store
+build, no APK, and push notifications further out still. The web client the relay serves
+is a **git repository browser** (`features/repos` + `features/invite`), with no channels,
+messages, or DMs; its enabling flag is literally named `BUZZ_SERVE_GIT_WEB_GUI`. To use
+Buzz's chat you need the desktop app, the CLI, or a self-built Flutter binary. See
+[MOBILE.md](./MOBILE.md).
 
 ### Two gotchas that cost real time
 
@@ -67,7 +70,7 @@ See [MOBILE.md](./MOBILE.md).
 | `buzz-relay` | **Running, healthy** | WebSocket relay on `:3000`, health `:8080`, metrics `:9102` |
 | `buzz` (CLI) / `buzz-admin` | Built, verified | Agent-first JSON in / JSON out |
 | `buzz-acp` / `buzz-agent` | Built | ACP harness + native agent |
-| Web client | **Serving** at `/` | Needs `BUZZ_WEB_DIR` **and** `BUZZ_SERVE_GIT_WEB_GUI=true` |
+| Web client | **Serving** at `/` | Needs `BUZZ_WEB_DIR` **and** `BUZZ_SERVE_GIT_WEB_GUI=true`. It is a **git repo browser, not a chat client** — see MOBILE.md |
 | PostgreSQL | 16.14, native (apt) | 54 tables, migrations applied — see substitution note below |
 | Redis | 7.0.15, native (apt) | Pub/sub subscribers connected |
 | Object storage | `moto` S3 on `:9000` | Substituted for MinIO. **Passes** the A3 conformance probe. In-memory — not durable. |
