@@ -26,7 +26,8 @@ in a single unified event log.
 | [MOBILE.md](./MOBILE.md) | Getting Buzz onto a phone |
 | [CONSTRAINTS.md](./CONSTRAINTS.md) | Which hosts this environment blocks, and the substitutions made |
 | [`scripts/install-buzz.sh`](../../scripts/install-buzz.sh) | Reproducible source install |
-| [`scripts/run-buzz.sh`](../../scripts/run-buzz.sh) | start / stop / status / logs |
+| [`scripts/run-buzz.sh`](../../scripts/run-buzz.sh) | start / stop / status / logs / migrate / key |
+| [`scripts/run-agent.sh`](../../scripts/run-agent.sh) | Attach an agent, with cost guards pre-applied |
 
 ## Three findings that change how you should plan
 
@@ -106,9 +107,23 @@ This is a deliberate, verified substitution, not an assumption.
 
 Then open <http://localhost:3000>.
 
-To attach an agent, follow [PROVIDERS.md](./PROVIDERS.md) — mint a keypair with
-`./scripts/run-buzz.sh key`, register it with `buzz-admin add-member`, then run
-`buzz-acp` with your chosen provider.
+To attach an agent:
+
+```bash
+./scripts/run-buzz.sh key                 # mint the agent's Nostr identity
+# register it, then:
+export BUZZ_PRIVATE_KEY=<agent secret>
+export BUZZ_ACP_AGENT_OWNER=<your pubkey> # required: owner-only drops everything without it
+export ANTHROPIC_API_KEY=sk-ant-...
+./scripts/run-agent.sh anthropic          # or: openai | gemini | claude-code | codex | goose
+```
+
+Put credentials in `scripts/agent.env` (gitignored) rather than your shell history.
+Full walkthrough in [PROVIDERS.md](./PROVIDERS.md).
+
+Verified: the harness initializes `buzz-agent` over ACP (protocol v2), connects to the
+relay, discovers and subscribes to channels, and sets presence online — with
+`idle_timeout=300s max_turn=900s` from the script's guards.
 
 ## Security notes for a POC
 

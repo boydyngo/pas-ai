@@ -304,13 +304,36 @@ of mode. They must be kind:9 stream messages from the owner that `p`-tag the age
 
 | Variable | Default | Why you care |
 |---|---|---|
-| `BUZZ_ACP_MAX_TURN_DURATION` | `7200` | Absolute wall-clock cap per turn. A runaway agent bills for two hours at this default. |
-| `BUZZ_ACP_IDLE_TIMEOUT` | `620` | Cancels a turn after this many seconds of silence. |
+| `BUZZ_ACP_MAX_TURN_DURATION` | `7200` | Absolute wall-clock cap per turn. A runaway agent bills for **two hours** at this default. |
+| `BUZZ_ACP_IDLE_TIMEOUT` | `900` | Cancels a turn after this many seconds of silence. |
 | `BUZZ_ACP_AGENTS` | `1` | Subprocess count (1–32). Each is a concurrent billing stream. |
 | `BUZZ_ACP_HEARTBEAT_INTERVAL` | `0` (off) | Every heartbeat is a paid model call. Leave off unless you want it. |
 
-For a POC, lower `BUZZ_ACP_MAX_TURN_DURATION` substantially and keep `--respond-to`
-at `owner-only`.
+> Upstream's `crates/buzz-acp/README.md` states the idle-timeout default is `620`. The
+> code disagrees — `DEFAULT_IDLE_TIMEOUT_SECS = 900` in `crates/buzz-acp/src/config.rs`,
+> and a live run logs `idle_timeout=900s`. The README is stale; trust `900`.
+
+`scripts/run-agent.sh` applies POC-appropriate values (`max_turn=900`,
+`idle_timeout=300`) and keeps `--respond-to owner-only`.
+
+### You must set an owner, or the agent ignores everything
+
+`owner-only` is the default gate, and an agent with no owner drops **all** inbound
+events. A live run makes this explicit:
+
+```
+WARN buzz_acp: respond-to=owner-only but no owner is set — all events will be
+     dropped. Set BUZZ_AUTH_TAG or --agent-owner, or use --respond-to=anyone.
+```
+
+Set your own pubkey as the owner:
+
+```bash
+export BUZZ_ACP_AGENT_OWNER="<your 64-char hex pubkey>"   # or --agent-owner
+```
+
+Do **not** reach for `--respond-to anyone` to make the warning go away — that removes the
+only thing standing between a public relay and your API bill.
 
 ---
 
