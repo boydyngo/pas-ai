@@ -22,6 +22,7 @@ in a single unified event log.
 
 | Document | Read it for |
 |---|---|
+| [LOCAL-SETUP.md](./LOCAL-SETUP.md) | **Running this on your own machine — read first if you are not in the cloud session** |
 | [PROVIDERS.md](./PROVIDERS.md) | Connecting OpenAI, Anthropic, and Google accounts — **start here** |
 | [MOBILE.md](./MOBILE.md) | Getting Buzz onto a phone |
 | [CONSTRAINTS.md](./CONSTRAINTS.md) | Which hosts this environment blocks, and the substitutions made |
