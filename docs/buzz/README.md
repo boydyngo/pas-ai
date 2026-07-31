@@ -49,20 +49,47 @@ up" column. No App Store build, no Play Store build, no APK. Push notifications 
 further out still. The working option for a phone today is the web client over a tunnel.
 See [MOBILE.md](./MOBILE.md).
 
+### Two gotchas that cost real time
+
+- **The relay will not boot without an S3 backend.** The git-on-object-storage *A3
+  conformance probe* defaults to **on** and is fatal. With no S3 the process aborts at
+  startup. Either provide a backend or set `BUZZ_GIT_CONFORMANCE_PROBE=false`.
+- **`BUZZ_WEB_DIR` alone does not serve the web UI.** You also need
+  `BUZZ_SERVE_GIT_WEB_GUI=true`, which defaults to false. Without it, `/` returns the
+  NIP-11 relay-info JSON to a browser instead of the SPA.
+
 ## What is running here
 
 | Component | Status | Notes |
 |---|---|---|
-| `buzz-relay` | Built from source | WebSocket relay, port 3000 |
-| `buzz-cli` / `buzz-admin` | Built from source | Agent-first JSON in / JSON out |
-| `buzz-acp` / `buzz-agent` | Built from source | ACP harness + native agent |
-| Web client | Built (`web/dist`) | Served by the relay via `BUZZ_WEB_DIR` |
-| PostgreSQL | 16.14, native (apt) | Substituted for containerised 17 — see below |
-| Redis | 7.0.15, native (apt) | Meets the Redis 7 requirement |
-| Typesense (search) | **Unavailable** | Download host blocked |
-| MinIO (media / object storage) | **Unavailable** | Download host blocked |
+| `buzz-relay` | **Running, healthy** | WebSocket relay on `:3000`, health `:8080`, metrics `:9102` |
+| `buzz` (CLI) / `buzz-admin` | Built, verified | Agent-first JSON in / JSON out |
+| `buzz-acp` / `buzz-agent` | Built | ACP harness + native agent |
+| Web client | **Serving** at `/` | Needs `BUZZ_WEB_DIR` **and** `BUZZ_SERVE_GIT_WEB_GUI=true` |
+| PostgreSQL | 16.14, native (apt) | 54 tables, migrations applied — see substitution note below |
+| Redis | 7.0.15, native (apt) | Pub/sub subscribers connected |
+| Object storage | `moto` S3 on `:9000` | Substituted for MinIO. **Passes** the A3 conformance probe. In-memory — not durable. |
+| Full-text search | **Working** | Postgres FTS. Typesense is *not* required — see CONSTRAINTS.md |
 | Desktop app (Tauri) | Not built | Headless container, no display |
 | Mobile app (Flutter) | Not built | Android SDK blocked; also upstream-incomplete |
+
+### Verified end to end
+
+```
+$ buzz channels create --name poc-test --type stream --visibility open
+{"accepted":true,"channel_id":"e373bc4b-…"}
+
+$ buzz messages send --channel e373bc4b-… --content "End-to-end verification…"
+{"accepted":true,"event_id":"2b05bf70…"}
+
+$ buzz messages get --channel e373bc4b-…      # message returned, kind:9, signed
+$ buzz messages search --query Postgres        # hit
+$ buzz messages search --query zzzznonexistent # [] — negative control
+```
+
+Relay startup log confirms `Database migrations complete` and
+`git object-store backend admitted: A3 conformance probe passed`
+(`race_width=32, race_rounds=3, transport_drops=0`).
 
 **On the Postgres substitution:** upstream specifies Postgres 17 and the PGDG apt repo is
 blocked, so this uses the distro's 16.14. All 26 migrations were audited for PG17-only

@@ -75,6 +75,22 @@ PGPASSWORD=buzz_dev psql -h localhost -U buzz -d buzz -tAc "SELECT version();" >
   || die "Cannot connect to the buzz database"
 
 # ---------------------------------------------------------------------------
+# 2b. Object storage
+# ---------------------------------------------------------------------------
+# The relay runs a FATAL startup gate — the git-on-object-storage A3 conformance
+# probe — which admits the S3 backend against a linearizable conditional-write
+# axiom. It defaults to ON and aborts boot on failure, so an S3 endpoint is not
+# optional. MinIO's download host is blocked here; PyPI is not, so we use moto,
+# which passes the probe. NOTE: moto_server is in-memory — objects do not survive
+# a restart. Replace with MinIO or real S3 for anything beyond a POC.
+log "Installing moto (S3-compatible server)"
+# --ignore-installed PyYAML: the distro-managed PyYAML has no RECORD file, so pip
+# cannot uninstall it and the whole install aborts without this.
+pip install --quiet --ignore-installed PyYAML "moto[server]" boto3 \
+  || warn "moto install failed — the relay will not boot without an S3 backend
+           unless you set BUZZ_GIT_CONFORMANCE_PROBE=false"
+
+# ---------------------------------------------------------------------------
 # 3. Build the Rust binaries
 # ---------------------------------------------------------------------------
 # crates.io is in the proxy no_proxy list, so Cargo fetches work where image pulls do not.
@@ -95,14 +111,17 @@ cat <<EOF
 
 $(log "Install complete")
 
-  Binaries : $BUZZ_SRC/target/release/{buzz-relay,buzz-cli,buzz-admin,buzz-acp,buzz-agent}
+  Binaries : $BUZZ_SRC/target/release/{buzz,buzz-relay,buzz-admin,buzz-acp,buzz-agent}
+             (the buzz-cli crate builds a binary named 'buzz')
   Web UI   : $BUZZ_SRC/web/dist
   Postgres : localhost:5432  (db=buzz user=buzz)
   Redis    : localhost:6379
+  S3       : localhost:9000  (moto — started by run-buzz.sh; IN-MEMORY, not durable)
 
-  Unavailable in this environment (see docs/buzz/CONSTRAINTS.md):
-    - Full-text search  (Typesense binary undownloadable)
-    - Media upload      (MinIO binary undownloadable)
+  Working: relay, channels, threads, DMs, canvases, audit log, git-on-object-storage,
+           and full-text search (Postgres FTS — Typesense is not required).
+  Not built here: desktop app (no display), mobile app (Android SDK blocked).
+  See docs/buzz/CONSTRAINTS.md.
 
   Next:
     scripts/run-buzz.sh start
