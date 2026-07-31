@@ -1,0 +1,103 @@
+# Block Buzz — POC Deployment
+
+Investigation and installation notes for [block/buzz](https://github.com/block/buzz),
+deployed here as a proof of concept.
+
+## What Buzz is
+
+An open-source collaboration workspace from Block, Inc., released 21 July 2026 under
+Apache 2.0. It merges chat and a software forge into one substrate: channels, threads,
+DMs, canvases, media, search, audit log, git hosting, and YAML workflows — all built on
+the [Nostr](https://nostr.com) protocol.
+
+The organising idea is **human–agent parity**. Every participant, human or AI, gets a
+platform-independent cryptographic keypair. Agents are not permission-gated bots; they
+are workspace members with the same surface area as humans, and their own audit trails.
+Identity and history travel with the keyholder rather than the platform.
+
+Every message, reaction, workflow step, code review, and git event becomes a signed entry
+in a single unified event log.
+
+## Documents
+
+| Document | Read it for |
+|---|---|
+| [PROVIDERS.md](./PROVIDERS.md) | Connecting OpenAI, Anthropic, and Google accounts — **start here** |
+| [MOBILE.md](./MOBILE.md) | Getting Buzz onto a phone |
+| [CONSTRAINTS.md](./CONSTRAINTS.md) | Which hosts this environment blocks, and the substitutions made |
+| [`scripts/install-buzz.sh`](../../scripts/install-buzz.sh) | Reproducible source install |
+| [`scripts/run-buzz.sh`](../../scripts/run-buzz.sh) | start / stop / status / logs |
+
+## Three findings that change how you should plan
+
+**1. The documented install path does not work here.** This host sits behind a
+policy-enforcing egress proxy that blocks every container registry blob store and every
+binary CDN Buzz depends on. No image pulls, no prebuilt binaries. Everything below was
+built from source. Details and the full blocked-host list are in
+[CONSTRAINTS.md](./CONSTRAINTS.md).
+
+**2. Your frontier subscriptions will not authenticate Buzz.** Buzz uses **API keys**,
+not consumer subscriptions. A ChatGPT Plus/Pro seat, a Claude Pro/Max seat, and a Google
+AI subscription are separate products from the metered API accounts Buzz needs. Upstream
+states this outright for OpenAI: *"use an OpenAI API key, not a ChatGPT subscription."*
+Further, **there is no native Google/Gemini provider at all** — Gemini is reachable only
+via OpenRouter or Block's internal Databricks route. See
+[PROVIDERS.md](./PROVIDERS.md).
+
+**3. The mobile app is not shipped.** Block lists mobile clients in the "🚧 being wired
+up" column. No App Store build, no Play Store build, no APK. Push notifications are
+further out still. The working option for a phone today is the web client over a tunnel.
+See [MOBILE.md](./MOBILE.md).
+
+## What is running here
+
+| Component | Status | Notes |
+|---|---|---|
+| `buzz-relay` | Built from source | WebSocket relay, port 3000 |
+| `buzz-cli` / `buzz-admin` | Built from source | Agent-first JSON in / JSON out |
+| `buzz-acp` / `buzz-agent` | Built from source | ACP harness + native agent |
+| Web client | Built (`web/dist`) | Served by the relay via `BUZZ_WEB_DIR` |
+| PostgreSQL | 16.14, native (apt) | Substituted for containerised 17 — see below |
+| Redis | 7.0.15, native (apt) | Meets the Redis 7 requirement |
+| Typesense (search) | **Unavailable** | Download host blocked |
+| MinIO (media / object storage) | **Unavailable** | Download host blocked |
+| Desktop app (Tauri) | Not built | Headless container, no display |
+| Mobile app (Flutter) | Not built | Android SDK blocked; also upstream-incomplete |
+
+**On the Postgres substitution:** upstream specifies Postgres 17 and the PGDG apt repo is
+blocked, so this uses the distro's 16.14. All 26 migrations were audited for PG17-only
+syntax — none found. The sole extension requirement is `pgcrypto`, which 16 provides.
+This is a deliberate, verified substitution, not an assumption.
+
+## Quick start
+
+```bash
+./scripts/install-buzz.sh     # idempotent; safe to re-run
+./scripts/run-buzz.sh start
+./scripts/run-buzz.sh status
+```
+
+Then open <http://localhost:3000>.
+
+To attach an agent, follow [PROVIDERS.md](./PROVIDERS.md) — mint a keypair with
+`./scripts/run-buzz.sh key`, register it with `buzz-admin add-member`, then run
+`buzz-acp` with your chosen provider.
+
+## Security notes for a POC
+
+- Agents default to `--respond-to owner-only`. Keep it there. An open agent on a
+  reachable relay is an unmetered path to your API spend.
+- `BUZZ_ACP_MAX_TURN_DURATION` defaults to **7200 seconds**. Lower it.
+- The `.env` in `/home/user/buzz-src` carries development credentials
+  (`buzz_dev` / `buzz_dev_secret`). They are fine for a local POC and must not survive
+  contact with anything reachable.
+- Before tunnelling to a phone, set `BUZZ_REQUIRE_RELAY_MEMBERSHIP=true` with
+  `RELAY_OWNER_PUBKEY` and `BUZZ_RELAY_PRIVATE_KEY`, and make `RELAY_URL` match the
+  public URL — it is used in NIP-42 auth challenges.
+
+## Upstream references
+
+- Repository — <https://github.com/block/buzz>
+- Announcement — <https://block.xyz/inside/introducing-buzz-where-humans-and-agents-work-together>
+- Engineering blog — <https://engineering.block.xyz/blog/buzz>
+- Privacy & support — <https://block.github.io/buzz/>
