@@ -1,0 +1,8 @@
+scripts/agent.env
+__pycache__/
+*.pyc
+
+# never commit local env files (a .env with live tokens reached this public repo on 2026-07-31)
+.env
+*.env
+!scripts/*.env.example
