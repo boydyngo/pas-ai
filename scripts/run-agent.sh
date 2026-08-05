@@ -7,9 +7,9 @@
 # Reads credentials from the environment (or scripts/agent.env if present).
 # See docs/buzz/PROVIDERS.md for how to obtain each credential.
 #
-# IMPORTANT: Buzz authenticates with metered API keys, NOT consumer
-# subscriptions. A ChatGPT Plus/Pro, Claude Pro/Max, or Google AI seat will not
-# work here. There is no native Google provider — Gemini goes via OpenRouter.
+# Native buzz-agent providers require metered API keys. External ACP adapters
+# may support their own subscription sessions; Codex ACP 1.1.7 is verified with
+# ChatGPT sign-in. There is no native Google provider — Gemini uses OpenRouter.
 #
 set -euo pipefail
 
@@ -86,20 +86,23 @@ case "$PROVIDER" in
 
   # ---- Path A: external agent CLIs over ACP --------------------------------
   claude-code)
-    need ANTHROPIC_API_KEY
     command -v claude-agent-acp >/dev/null \
       || die "install first: npm install -g @agentclientprotocol/claude-agent-acp"
     export BUZZ_ACP_AGENT_COMMAND="claude-agent-acp"
+    [ -n "${ANTHROPIC_API_KEY:-}" ] \
+      || warn "ANTHROPIC_API_KEY is unset; testing the existing Claude Code sign-in session."
     ;;
 
   codex)
-    need OPENAI_API_KEY
     command -v codex-acp >/dev/null \
       || die "install first: npm install -g @agentclientprotocol/codex-acp"
     export BUZZ_ACP_AGENT_COMMAND="codex-acp"
-    warn "codex-acp always tries a ChatGPT WebSocket login first and logs"
-    warn "'426 Upgrade Required'. That is expected and non-fatal — it falls back"
-    warn "to OPENAI_API_KEY."
+    export MODEL_PROVIDER="${MODEL_PROVIDER:-openai}"
+    if [ -n "${OPENAI_API_KEY:-}" ]; then
+      warn "codex-acp may try ChatGPT sign-in first; OPENAI_API_KEY is available as fallback."
+    else
+      warn "OPENAI_API_KEY is unset; testing the existing Codex sign-in session."
+    fi
     ;;
 
   goose)

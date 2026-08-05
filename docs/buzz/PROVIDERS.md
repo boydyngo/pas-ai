@@ -9,36 +9,30 @@ How to wire OpenAI, Anthropic, and Google models into a Buzz workspace.
 This is the single most important thing to understand before you start, and it is
 the most common source of wasted money and time.
 
-**Buzz authenticates to models with API keys, not with consumer subscriptions.**
+**Native `buzz-agent` providers authenticate with API keys, not consumer subscriptions.**
 
 A ChatGPT Plus/Pro seat, a Claude Pro/Max seat, and a Google AI Pro/Ultra seat are
 *consumer product subscriptions*. They entitle you to use the vendor's own chat app.
-They are **not** API credentials, they are billed separately from API usage, and with
-one partial exception (below) they will not authenticate Buzz.
+They are **not** API credentials and are billed separately from API usage. External ACP
+adapters are a separate path: modern Codex ACP can reuse a ChatGPT sign-in.
 
 Upstream is explicit about this. From `crates/buzz-acp/README.md`, on the Codex path:
 
 > `OPENAI_API_KEY` — **required — use an OpenAI API key, not a ChatGPT subscription.**
 
-Budget accordingly: connecting all three vendors means three metered API accounts on
-top of any subscriptions you already pay for.
+Budget accordingly for native providers. A verified Codex subscription path can remove
+the OpenAI API cost for that external-agent route.
 
-### The partial exception, stated honestly
+### Verified exception: Codex ACP with ChatGPT sign-in
 
-The Claude Code CLI and the Codex CLI *do* support subscription-based sign-in when you
-run them directly in a terminal. Buzz's ACP harness spawns those same binaries as
-subprocesses, so an existing signed-in session on the host **may** carry through.
+On 2026-07-31, `buzz-acp` at upstream commit `052174a` spawned `codex-acp` 1.1.7
+with both `OPENAI_API_KEY` and `CODEX_API_KEY` unset. The adapter reused an existing
+ChatGPT login, listed subscription-backed models, and completed an end-to-end Buzz
+mention with the exact reply `SUBSCRIPTION ACP OK`.
 
-This is worth testing before you buy API credit, but do not plan around it:
-
-- Upstream documents the API-key path and only the API-key path.
-- `codex-acp` is documented to attempt a ChatGPT WebSocket login first, fail with
-  `426 Upgrade Required`, and **fall back to `OPENAI_API_KEY`** — i.e. the
-  subscription path is expected to fail and the key is the working path.
-- Subprocess environments are sanitised (`crates/buzz-agent/README.md`, Security
-  Model: MCP children get a `PATH`/`HOME`/`TERM`/`LANG`/`LC_ALL`/`TMPDIR` whitelist).
-
-Test it, keep a key in reserve.
+This does not make a ChatGPT subscription an API credential. It proves that the external
+Codex ACP adapter supports its own ChatGPT authentication path. Claude Code subscription
+sign-in through `claude-agent-acp` remains unverified.
 
 ---
 
@@ -185,15 +179,14 @@ Pin explicitly with `OPENAI_COMPAT_API=chat|responses` if your gateway diverges.
 ```bash
 npm install -g @agentclientprotocol/codex-acp
 
-export OPENAI_API_KEY="sk-..."
 export BUZZ_ACP_AGENT_COMMAND="codex-acp"
 
 ./target/release/buzz-acp
 ```
 
-> **Expected noise:** `codex-acp` always attempts a ChatGPT WebSocket login first and
-> logs `426 Upgrade Required`. This is non-fatal — it falls back to `OPENAI_API_KEY`.
-> Set the key so the fallback has somewhere to land.
+`codex-acp` 1.1.7 supports ChatGPT login, API keys, and custom gateways. Sign in with
+Codex first, or set `OPENAI_API_KEY` for API billing. Run
+`bash ./scripts/test-codex-subscription.sh setup|run|send|get` to reproduce the no-key path.
 
 ---
 

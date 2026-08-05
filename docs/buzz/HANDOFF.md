@@ -90,30 +90,30 @@ fd6b87d  Correct mobile guidance: the web client is a git browser, not a chat cl
 c6e7b7a  Add Block Buzz POC: source install, runbook, and provider/mobile guides
 ```
 
+Follow-up development on 2026-07-31 added `scripts/test-codex-subscription.sh` for the
+reproducible no-key Codex test and `.gitattributes` to preserve LF endings for shell
+scripts on Windows checkouts.
+
 ---
 
 ## 3. Findings from the source — these are universal
 
 These came from reading Buzz's code and running its binaries. They hold on any machine.
 
-### 3.1 Buzz uses API keys, not consumer subscriptions
+### 3.1 Native providers use API keys; Codex ACP can reuse ChatGPT sign-in
 
-The single most consequential finding. A ChatGPT Plus/Pro seat, a Claude Pro/Max seat, and
-a Google AI Pro/Ultra seat are consumer products. They are **not** API credentials, are
-billed separately, and will not authenticate Buzz.
+ChatGPT Plus/Pro, Claude Pro/Max, and Google AI Pro/Ultra are consumer products. They are
+**not** API credentials and do not authenticate native `buzz-agent` providers.
 
 Upstream states it outright in `crates/buzz-acp/README.md`:
 
 > `OPENAI_API_KEY` — **required — use an OpenAI API key, not a ChatGPT subscription.**
 
-Partial exception worth testing but not relying on: the Claude Code and Codex CLIs support
-subscription sign-in when run directly. `buzz-acp` spawns them as subprocesses, so a
-signed-in session *might* carry through. Evidence against depending on it: upstream
-documents only the key path; `codex-acp` is documented to attempt a ChatGPT WebSocket
-login, fail with `426 Upgrade Required`, and fall back to `OPENAI_API_KEY`; and MCP child
-environments are whitelist-sanitised (`PATH`, `HOME`, `TERM`, `LANG`, `LC_ALL`, `TMPDIR`).
-
-**Not yet tested. This is the highest-value open question — see §8.**
+**Follow-up verified 2026-07-31:** `codex-acp` 1.1.7 supports its own ChatGPT auth method.
+With `OPENAI_API_KEY` and `CODEX_API_KEY` unset, a Codex process spawned by `buzz-acp`
+reused an existing ChatGPT login, listed models, received a Buzz mention, and replied
+`SUBSCRIPTION ACP OK` after 13 seconds. Claude Code subscription sign-in through
+`claude-agent-acp` remains unverified.
 
 ### 3.2 There is no native Google/Gemini provider
 
@@ -272,7 +272,8 @@ discovered 1 channel(s) / subscribed to channel e373bc4b-…
 presence set to online
 ```
 
-**Not verified: any live LLM provider call.** That needs real API keys. See §8.
+**Follow-up verified:** one live Codex turn completed through ChatGPT subscription auth.
+Direct API-key calls against Anthropic, OpenAI, and OpenRouter remain unverified. See §8.
 
 ---
 
@@ -342,14 +343,12 @@ Keep: `PROVIDERS.md`, `MOBILE.md`, `LOCAL-SETUP.md`, `run-agent.sh`, `render-aud
 
 Ordered by value.
 
-1. **Test whether CLI subscription sign-in survives the ACP harness.** Sign into Claude
-   Code and/or Codex CLI normally, then run `buzz-acp` with
-   `BUZZ_ACP_AGENT_COMMAND=claude-agent-acp` (or `codex-acp`) and **no** API key set. If a
-   turn completes, subscriptions are usable and the cost picture changes materially. If it
-   fails, §3.1 stands. *This has not been tested and is the biggest open question.*
-2. **Make one live provider call per vendor** (Anthropic, OpenAI, Gemini-via-OpenRouter)
-   and confirm an agent answers an `@mention` end to end. Nothing here has exercised a real
-   LLM call.
+1. **Test Claude Code subscription sign-in through ACP.** Codex is now verified; repeat
+   the no-key test with `BUZZ_ACP_AGENT_COMMAND=claude-agent-acp` to determine whether a
+   Claude Pro/Max session also survives the harness.
+2. **Make one direct API-key call per vendor** (Anthropic, OpenAI, Gemini-via-OpenRouter)
+   and confirm an agent answers an `@mention` end to end. Only the Codex ChatGPT
+   subscription path has exercised a live model.
 3. **Replace moto with real object storage** if anything beyond a POC is intended — moto is
    in-memory and loses every object on restart.
 4. **Decide the mobile position.** Either build the Flutter app from source
